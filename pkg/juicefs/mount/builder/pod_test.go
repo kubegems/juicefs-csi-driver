@@ -183,7 +183,7 @@ func Test_getCacheDirVolumes(t *testing.T) {
 			Type: &dir,
 		}}}}
 
-	s, _ := config.ParseSetting(map[string]string{"name": "test"}, nil, optionWithoutCacheDir, true)
+	s, _ := config.ParseSetting(map[string]string{"name": "test"}, nil, optionWithoutCacheDir, true, "")
 	r.jfsSetting = s
 	cacheVolumes, cacheVolumeMounts := r.genCacheDirVolumes()
 	volumes = append(volumes, cacheVolumes...)
@@ -192,7 +192,7 @@ func Test_getCacheDirVolumes(t *testing.T) {
 		t.Error("getCacheDirVolumes can't work properly")
 	}
 
-	s, _ = config.ParseSetting(map[string]string{"name": "test"}, nil, optionWithCacheDir, true)
+	s, _ = config.ParseSetting(map[string]string{"name": "test"}, nil, optionWithCacheDir, true, "")
 	r.jfsSetting = s
 	cacheVolumes, cacheVolumeMounts = r.genCacheDirVolumes()
 	volumes = append(volumes, cacheVolumes...)
@@ -201,7 +201,7 @@ func Test_getCacheDirVolumes(t *testing.T) {
 		t.Error("getCacheDirVolumes can't work properly")
 	}
 
-	s, _ = config.ParseSetting(map[string]string{"name": "test"}, nil, optionWithCacheDir2, true)
+	s, _ = config.ParseSetting(map[string]string{"name": "test"}, nil, optionWithCacheDir2, true, "")
 	r.jfsSetting = s
 	cacheVolumes, cacheVolumeMounts = r.genCacheDirVolumes()
 	volumes = append(volumes, cacheVolumes...)
@@ -210,7 +210,7 @@ func Test_getCacheDirVolumes(t *testing.T) {
 		t.Error("getCacheDirVolumes can't work properly")
 	}
 
-	s, _ = config.ParseSetting(map[string]string{"name": "test"}, nil, optionWithCacheDir3, true)
+	s, _ = config.ParseSetting(map[string]string{"name": "test"}, nil, optionWithCacheDir3, true, "")
 	r.jfsSetting = s
 	cacheVolumes, cacheVolumeMounts = r.genCacheDirVolumes()
 	volumes = append(volumes, cacheVolumes...)
@@ -250,7 +250,7 @@ func TestNewMountPod(t *testing.T) {
 		MountPath: "/test",
 	}}, podConfigTest.Spec.Containers[0].VolumeMounts...)
 
-	s, _ := config.ParseSetting(map[string]string{"name": "test"}, nil, []string{"cache-dir=/dev/shm/imagenet-0:/dev/shm/imagenet-1", "cache-size=10240", "metrics=0.0.0.0:9567"}, true)
+	s, _ := config.ParseSetting(map[string]string{"name": "test"}, nil, []string{"cache-dir=/dev/shm/imagenet-0:/dev/shm/imagenet-1", "cache-size=10240", "metrics=0.0.0.0:9567"}, true, "")
 	r := PodBuilder{BaseBuilder{s, 0}}
 	cmdWithCacheDir := `/bin/mount.juicefs ${metaurl} /jfs/default-imagenet -o cache-dir=/dev/shm/imagenet-0:/dev/shm/imagenet-1,cache-size=10240,metrics=0.0.0.0:9567`
 	cacheVolumes, cacheVolumeMounts := r.genCacheDirVolumes()

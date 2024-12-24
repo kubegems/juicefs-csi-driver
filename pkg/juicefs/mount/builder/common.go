@@ -100,7 +100,14 @@ func (r *BaseBuilder) genCommonJuicePod(cnGen func() corev1.Container) *corev1.P
 				"umount %s && rmdir %s", r.jfsSetting.MountPath, r.jfsSetting.MountPath)}},
 		},
 	}
-
+	if value, ok := pod.ObjectMeta.Labels[config.NeedWarmUp]; ok && value != "" {
+		// /jfs/pvc-259b72b5-5e34-48e6-b280-fca0d20409b3-vmxipp/dataset-default-chatglm3-6b-chat-int4
+		storageSetPath := path.Join(r.jfsSetting.MountPath, value)
+		pod.Spec.Containers[0].Lifecycle.PostStart = &corev1.Handler{
+			Exec: &corev1.ExecAction{Command: []string{"sh", "-c", fmt.Sprintf(
+				"sleep 5 && /usr/local/bin/juicefs warmup %s", storageSetPath)}},
+		}
+	}
 	if r.jfsSetting.Attr.HostNetwork || !r.jfsSetting.IsCe {
 		// When using hostNetwork, the MountPod will use a random port for metrics.
 		// Before inducing any auxiliary method to detect that random port, the
@@ -256,6 +263,9 @@ func (r *BaseBuilder) _genMetadata() (labels map[string]string, annotations map[
 	annotations[config.UniqueId] = r.jfsSetting.UniqueId
 	if r.jfsSetting.CleanCache {
 		annotations[config.CleanCache] = "true"
+	}
+	if r.jfsSetting.WarmupStorageSet != "" {
+		labels[config.NeedWarmUp] = r.jfsSetting.WarmupStorageSet
 	}
 	return
 }

@@ -80,7 +80,8 @@ type JfsSetting struct {
 	SubPath    string   // subPath which is to be created or deleted
 	SecretName string   // secret name which is set env in pod
 
-	Attr PodAttr
+	WarmupStorageSet string `json:"-"`
+	Attr             PodAttr
 }
 
 type PodAttr struct {
@@ -113,9 +114,12 @@ type CachePVC struct {
 	Path    string
 }
 
-func ParseSetting(secrets, volCtx map[string]string, options []string, usePod bool) (*JfsSetting, error) {
+func ParseSetting(secrets, volCtx map[string]string, options []string, usePod bool, warmupStorageSet string) (*JfsSetting, error) {
 	jfsSetting := JfsSetting{
 		Options: []string{},
+	}
+	if warmupStorageSet != "" {
+		jfsSetting.WarmupStorageSet = warmupStorageSet
 	}
 	if options != nil {
 		jfsSetting.Options = options

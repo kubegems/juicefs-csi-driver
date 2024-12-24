@@ -338,11 +338,11 @@ func (j *juicefs) JfsMount(ctx context.Context, volumeID string, target string, 
 
 // Settings get all jfs settings and generate format/auth command
 func (j *juicefs) Settings(ctx context.Context, volumeID string, secrets, volCtx map[string]string, options []string) (*config.JfsSetting, error) {
-	mountOptions, err := j.validOptions(volumeID, options, volCtx)
+	mountOptions, warmup, err := j.validOptions(volumeID, options, volCtx)
 	if err != nil {
 		return nil, err
 	}
-	jfsSetting, err := config.ParseSetting(secrets, volCtx, mountOptions, !config.ByProcess)
+	jfsSetting, err := config.ParseSetting(secrets, volCtx, mountOptions, !config.ByProcess, warmup)
 	if err != nil {
 		klog.V(5).Infof("Parse config error: %v", err)
 		return nil, err
@@ -493,15 +493,20 @@ func (j *juicefs) validTarget(target string) error {
 	return nil
 }
 
-func (j *juicefs) validOptions(volumeId string, options []string, volCtx map[string]string) ([]string, error) {
+func (j *juicefs) validOptions(volumeId string, options []string, volCtx map[string]string) ([]string, string, error) {
+	var warmupStorgaeSet string
 	mountOptions := []string{}
 	for _, option := range options {
 		mountOption := strings.TrimSpace(option)
 		ops := strings.Split(mountOption, "=")
 		if len(ops) > 2 {
-			return []string{}, fmt.Errorf("invalid mount option: %s", mountOption)
+			return []string{}, warmupStorgaeSet, fmt.Errorf("invalid mount option: %s", mountOption)
 		}
 		if len(ops) == 2 {
+			if ops[0] == "warmup" && ops[1] != "" {
+				warmupStorgaeSet = ops[1]
+				continue
+			}
 			mountOption = fmt.Sprintf("%s=%s", strings.TrimSpace(ops[0]), strings.TrimSpace(ops[1]))
 		}
 		if mountOption == "writeback" {
@@ -514,24 +519,24 @@ func (j *juicefs) validOptions(volumeId string, options []string, volCtx map[str
 			}
 			memLimit, err := resource.ParseQuantity(rs)
 			if err != nil {
-				return []string{}, fmt.Errorf("invalid memory limit: %s", volCtx[config.MountPodMemLimitKey])
+				return []string{}, warmupStorgaeSet, fmt.Errorf("invalid memory limit: %s", volCtx[config.MountPodMemLimitKey])
 			}
 			memLimitByte := memLimit.Value()
 
 			// buffer-size is in MiB, turn to byte
 			bufSize, err := strconv.Atoi(ops[1])
 			if err != nil {
-				return []string{}, fmt.Errorf("invalid mount option: %s", mountOption)
+				return []string{}, warmupStorgaeSet, fmt.Errorf("invalid mount option: %s", mountOption)
 			}
 			bufferSize := int64(bufSize) << 20
 
 			if bufferSize > memLimitByte {
-				return []string{}, fmt.Errorf("buffer-size %s MiB is greater than pod memory limit %s", ops[1], memLimit.String())
+				return []string{}, warmupStorgaeSet, fmt.Errorf("buffer-size %s MiB is greater than pod memory limit %s", ops[1], memLimit.String())
 			}
 		}
 		mountOptions = append(mountOptions, mountOption)
 	}
-	return mountOptions, nil
+	return mountOptions, warmupStorgaeSet, nil
 }
 
 func (j *juicefs) JfsUnmount(ctx context.Context, volumeId, mountPath string) error {

@@ -632,7 +632,7 @@ func TestParseSecret(t *testing.T) {
 			if tt.args.MountLabels != "" {
 				MountLabels = tt.args.MountLabels
 			}
-			got, err := ParseSetting(tt.args.secrets, tt.args.volCtx, tt.args.options, tt.args.usePod)
+			got, err := ParseSetting(tt.args.secrets, tt.args.volCtx, tt.args.options, tt.args.usePod, "")
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ParseSecret() error = %v, wantErr %v", err, tt.wantErr)
 				return

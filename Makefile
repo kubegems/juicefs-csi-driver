@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-IMAGE?=juicedata/juicefs-csi-driver
+IMAGE?=registry.cn-beijing.aliyuncs.com/kubegems/juicefs-csi-driver
 REGISTRY?=docker.io
 DASHBOARD_IMAGE?=juicedata/csi-dashboard
 TARGETARCH?=amd64
 VERSION=$(shell git describe --tags --match 'v*' --always --dirty)
 GIT_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
 GIT_COMMIT?=$(shell git rev-parse HEAD)
-DEV_TAG=dev-$(shell git describe --always --dirty)
+DEV_TAG=v0.23.0-xiaoshi
 BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 PKG=github.com/juicedata/juicefs-csi-driver
 LDFLAGS?="-X ${PKG}/pkg/driver.driverVersion=${VERSION} -X ${PKG}/pkg/driver.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/driver.buildDate=${BUILD_DATE} -s -w"
@@ -33,7 +33,7 @@ GOBIN=$(shell pwd)/bin
 .PHONY: juicefs-csi-driver
 juicefs-csi-driver:
 	mkdir -p bin
-	CGO_ENABLED=0 GOOS=linux go build -ldflags ${LDFLAGS} -o bin/juicefs-csi-driver ./cmd/
+	CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -ldflags ${LDFLAGS} -o bin/juicefs-csi-driver ./cmd/
 
 .PHONY: verify
 verify:
@@ -89,9 +89,8 @@ uninstall: yaml
 # build dev image
 .PHONY: image-dev
 image-dev: juicefs-csi-driver
-	docker build --build-arg TARGETARCH=$(TARGETARCH) -t $(IMAGE):$(DEV_TAG) -f docker/dev.Dockerfile bin
-	docker build --build-context project=. --build-context ui=dashboard-ui/ -f docker/dashboard.Dockerfile \
-		-t $(REGISTRY)/$(DASHBOARD_IMAGE):$(DEV_TAG) .
+	docker build --build-arg TARGETARCH=$(TARGETARCH) --push -t $(IMAGE):$(DEV_TAG) -f docker/dev.Dockerfile bin
+
 
 # push dev image
 .PHONY: push-dev

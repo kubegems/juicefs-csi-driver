@@ -73,6 +73,7 @@ const (
 	PodTypeValue         = "juicefs-mount"
 	PodUniqueIdLabelKey  = "volume-id"
 	PodJuiceHashLabelKey = "juicefs-hash"
+	NeedWarmUp           = "juicefs-warmup"
 	Finalizer            = "juicefs.com/finalizer"
 	JuiceFSUUID          = "juicefs-uuid"
 	UniqueId             = "juicefs-uniqueid"
