@@ -19,7 +19,7 @@ TARGETARCH?=amd64
 VERSION=$(shell git describe --tags --match 'v*' --always --dirty)
 GIT_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
 GIT_COMMIT?=$(shell git rev-parse HEAD)
-DEV_TAG=v0.23.0-xiaoshi
+DEV_TAG=v1.0.9
 BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 PKG=github.com/juicedata/juicefs-csi-driver
 LDFLAGS?="-X ${PKG}/pkg/driver.driverVersion=${VERSION} -X ${PKG}/pkg/driver.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/driver.buildDate=${BUILD_DATE} -s -w"
@@ -89,7 +89,7 @@ uninstall: yaml
 # build dev image
 .PHONY: image-dev
 image-dev: juicefs-csi-driver
-	docker build --build-arg TARGETARCH=$(TARGETARCH) --push -t $(IMAGE):$(DEV_TAG) -f docker/dev.Dockerfile bin
+	docker buildx build --platform linux/amd64 --push -t $(IMAGE):$(DEV_TAG) -f docker/dev.Dockerfile bin
 
 
 # push dev image
