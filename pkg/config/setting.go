@@ -371,6 +371,7 @@ func ParseAppInfo(volCtx map[string]string) (*AppInfo, error) {
 	return nil, nil
 }
 
+// s.FormatOptions -> capacity=1000,block-size=4096,trash-days=0
 func (s *JfsSetting) ParseFormatOptions() ([][]string, error) {
 	options := strings.Split(s.FormatOptions, ",")
 	parsedFormatOptions := make([][]string, 0, len(options))

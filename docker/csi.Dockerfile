@@ -12,13 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.19-bullseye as builder
+FROM golang:1.20-buster as builder
 
 ARG GOPROXY
 ARG TARGETARCH
-ARG JUICEFS_REPO_BRANCH=main
-ARG JUICEFS_REPO_REF=${JUICEFS_REPO_BRANCH}
-ARG JUICEFS_CSI_REPO_REF=master
+ARG JUICEFS_REPO_BRANCH=release-1.3-beta1
+ARG JUICEFS_COMMIT=189230c355af8f16fd9c90b780da7413157b9130
 
 RUN bash -c "if [[ '${TARGETARCH}' == amd64 ]]; then mkdir -p /home/travis/.m2 && \
     wget -O /home/travis/.m2/foundationdb-clients_6.3.23-1_${TARGETARCH}.deb https://github.com/apple/foundationdb/releases/download/6.3.23/foundationdb-clients_6.3.23-1_${TARGETARCH}.deb && \
@@ -26,17 +25,18 @@ RUN bash -c "if [[ '${TARGETARCH}' == amd64 ]]; then mkdir -p /home/travis/.m2 &
     wget -O - https://download.gluster.org/pub/gluster/glusterfs/10/rsa.pub | apt-key add - && \
     echo deb [arch=${TARGETARCH}] https://download.gluster.org/pub/gluster/glusterfs/10/LATEST/Debian/buster/${TARGETARCH}/apt buster main > /etc/apt/sources.list.d/gluster.list && \
     wget -q -O- 'https://download.ceph.com/keys/release.asc' | apt-key add - && \
-    echo deb https://download.ceph.com/debian-17.2.6/ bullseye main | tee /etc/apt/sources.list.d/ceph.list && \
+    echo deb https://download.ceph.com/debian-15.2.17/ buster main | tee /etc/apt/sources.list.d/ceph.list && \
     apt-get update && apt-get install -y uuid-dev libglusterfs-dev glusterfs-common librados2 librados-dev upx-ucl; fi"
 
 WORKDIR /workspace
 ENV GOPROXY=${GOPROXY:-https://proxy.golang.org}
+COPY juicefs-csi-driver-${TARGETARCH} /workspace/juicefs-csi-driver/bin/juicefs-csi-driver
 RUN apt-get update && apt-get install -y musl-tools && \
-    git clone https://github.com/juicedata/juicefs-csi-driver && \
-    cd juicefs-csi-driver && git checkout $JUICEFS_CSI_REPO_REF && make && \
+    # git clone https://github.com/juicedata/juicefs-csi-driver && \
+    # cd juicefs-csi-driver && git checkout $JUICEFS_CSI_REPO_REF && make && \
     cd /workspace && git clone --branch=$JUICEFS_REPO_BRANCH https://github.com/juicedata/juicefs && \
-    cd juicefs && git checkout $JUICEFS_REPO_REF && \
-    bash -c "if [[ ${TARGETARCH} == amd64 ]]; then make juicefs.all && mv juicefs.all juicefs; else make juicefs; fi"
+    cd juicefs && git reset --hard $JUICEFS_COMMIT && \
+    bash -c "if [[ ${TARGETARCH} == amd64 ]]; then make juicefs; else make juicefs; fi"
 
 FROM python:3.8-slim-bullseye
 
@@ -63,7 +63,7 @@ RUN apt update && \
     wget -O - https://download.gluster.org/pub/gluster/glusterfs/10/rsa.pub | apt-key add - && \
     echo deb [arch=${TARGETARCH}] https://download.gluster.org/pub/gluster/glusterfs/10/LATEST/Debian/buster/${TARGETARCH}/apt buster main > /etc/apt/sources.list.d/gluster.list && \
     wget -q -O- 'https://download.ceph.com/keys/release.asc' | apt-key add - && \
-    echo deb https://download.ceph.com/debian-17.2.6/ bullseye main | tee /etc/apt/sources.list.d/ceph.list && \
+    echo deb https://download.ceph.com/debian-15.2.17/ buster main | tee /etc/apt/sources.list.d/ceph.list && \
     apt-get update && apt-get install -y uuid-dev libglusterfs-dev glusterfs-common librados2 librados-dev; fi"
 
 RUN apt-get update && apt-get install -y curl fuse procps iputils-ping strace iproute2 net-tools tcpdump lsof && \
@@ -79,11 +79,9 @@ RUN jfs_mount_path=${JFS_MOUNT_PATH} && \
     chmod +x ${jfs_mount_path} && cp juicefs.py ${JUICEFS_CLI} && chmod +x ${JUICEFS_CLI}
 
 COPY --from=builder /workspace/juicefs-csi-driver/bin/juicefs-csi-driver /usr/local/bin/
-COPY --from=builder /workspace/juicefs-csi-driver/THIRD-PARTY /
 COPY --from=builder /workspace/juicefs/juicefs /usr/local/bin/
 
 RUN ln -s /usr/local/bin/juicefs /bin/mount.juicefs
 
-RUN /usr/bin/juicefs version && /usr/local/bin/juicefs --version
 
-ENTRYPOINT ["/tini", "--", "juicefs-csi-driver"]
+ENTRYPOINT ["/tini","-g", "--", "juicefs-csi-driver"]

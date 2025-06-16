@@ -17,7 +17,7 @@ FROM golang:1.19-buster as binaryimage
 ARG GOPROXY
 ARG TARGETARCH
 ARG JUICEFS_REPO_URL=https://github.com/juicedata/juicefs
-ARG JUICEFS_REPO_BRANCH=main
+ARG JUICEFS_REPO_BRANCH=v1.1.0
 ARG JUICEFS_REPO_REF=${JUICEFS_REPO_BRANCH}
 
 RUN bash -c "if [[ ${TARGETARCH} == amd64 ]]; then mkdir -p /home/travis/.m2 && \
@@ -47,4 +47,4 @@ RUN bash -c "if [[ ${TARGETARCH} == amd64 ]]; then mkdir -p /home/travis/.m2 && 
     wget -O - https://download.gluster.org/pub/gluster/glusterfs/10/rsa.pub | apt-key add - && \
     echo deb [arch=${TARGETARCH}] https://download.gluster.org/pub/gluster/glusterfs/10/LATEST/Debian/buster/${TARGETARCH}/apt buster main > /etc/apt/sources.list.d/gluster.list && \
     apt-get update && apt-get install -y uuid-dev libglusterfs-dev glusterfs-common; fi"
-RUN ln -s /usr/local/bin/juicefs /bin/mount.juicefs && /usr/local/bin/juicefs --version
+RUN bash -c "ln -s /usr/local/bin/juicefs /bin/mount.juicefs"

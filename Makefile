@@ -13,13 +13,14 @@
 # limitations under the License.
 
 IMAGE?=registry.cn-beijing.aliyuncs.com/kubegems/juicefs-csi-driver
+JUICEFS_IMAGE?=registry.cn-beijing.aliyuncs.com/kubegems/juicefs-mount
 REGISTRY?=docker.io
 DASHBOARD_IMAGE?=juicedata/csi-dashboard
 TARGETARCH?=amd64
 VERSION=$(shell git describe --tags --match 'v*' --always --dirty)
 GIT_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
 GIT_COMMIT?=$(shell git rev-parse HEAD)
-DEV_TAG=v1.0.9
+DEV_TAG=v0.23.0-xiaoshi
 BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 PKG=github.com/juicedata/juicefs-csi-driver
 LDFLAGS?="-X ${PKG}/pkg/driver.driverVersion=${VERSION} -X ${PKG}/pkg/driver.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/driver.buildDate=${BUILD_DATE} -s -w"
@@ -30,10 +31,32 @@ GOPATH=$(shell go env GOPATH)
 GOOS=$(shell go env GOOS)
 GOBIN=$(shell pwd)/bin
 
-.PHONY: juicefs-csi-driver
-juicefs-csi-driver:
-	mkdir -p bin
-	CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -ldflags ${LDFLAGS} -o bin/juicefs-csi-driver ./cmd/
+
+
+
+BIN_DIR?=bin
+define go-build
+	@echo "Building ${1}/${2}"
+	CGO_ENABLED=0 GOOS=$(1) GOARCH=$(2) go build -ldflags ${LDFLAGS} -o bin/juicefs-csi-driver-$(2) ./cmd/
+endef
+
+.PHONY: release-build
+release-build: ## Build local binary.
+	- mkdir -p ${BIN_DIR}
+	$(call go-build,linux,amd64)
+	$(call go-build,linux,arm64)
+
+
+PLATFORM?=linux/amd64,linux/arm64
+.PHONY: release-image
+release-image: release-build
+	docker buildx build --platform=${PLATFORM} --push -t $(IMAGE):$(DEV_TAG) -f docker/csi.Dockerfile ${BIN_DIR}
+
+.PHONY: juicefs-ce
+juicefs-ce:
+	docker buildx build --platform=${PLATFORM} --push -t $(JUICEFS_IMAGE):ce-v1.1.0 -f docker/ce.juicefs.Dockerfile .
+
+
 
 .PHONY: verify
 verify:
